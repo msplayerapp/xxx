@@ -1,8 +1,8 @@
-name: Fetch Playlist Every 4 Minutes
+name: Fetch Akash Drama Playlist
 
 on:
   schedule:
-    - cron: "*/4 * * * *"
+    - cron: "*/4 * * * *"   # প্রতি ৪ মিনিট পর
   workflow_dispatch:
 
 jobs:
@@ -10,31 +10,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout private repo
+      - name: Checkout current repo (where workflow runs)
+        uses: actions/checkout@v4
+
+      - name: Checkout private repo (akash_drama)
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 1
+          repository: msplayerapp/akash_drama
+          token: ${{ secrets.PRIVATE_TOKEN }}   # নিচে বোঝানো হয়েছে কিভাবে এইটা তৈরি করবে
+          path: akash_repo
 
-      - name: Print current time
-        run: echo "Running at $(date)"
-
-      - name: Show playlist.m3u content
+      - name: Verify playlist.m3u exists
         run: |
-          if [ -f playlist.m3u ]; then
-            echo " playlist.m3u found!"
-            head -n 20 playlist.m3u
+          if [ -f "akash_repo/playlist.m3u" ]; then
+            echo "✅ playlist.m3u found!"
+            head -n 20 akash_repo/playlist.m3u
           else
-            echo " playlist.m3u not found!"
+            echo "❌ playlist.m3u not found in akash_repo!"
+            exit 1
           fi
 
-      - name: Run custom Python script (optional)
+      - name: Process playlist securely (Python)
         run: |
           python3 <<'PY'
-          import time
-          print("Processing playlist securely...")
-          with open("playlist.m3u", "r", encoding="utf-8") as f:
-              data = f.read()
-              print("Playlist length:", len(data))
-          time.sleep(1)
+          import os, time
+          path = "akash_repo/playlist.m3u"
+          if os.path.exists(path):
+              with open(path, "r", encoding="utf-8") as f:
+                  data = f.read()
+              print("✅ Playlist fetched successfully!")
+              print("File size:", len(data), "bytes")
+          else:
+              print("❌ playlist.m3u missing!")
           PY
