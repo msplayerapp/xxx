@@ -1,8 +1,8 @@
-name: Fetch Akash Drama Playlist
+name: Update AkashGo Playlist
 
 on:
   schedule:
-    - cron: "*/4 * * * *"
+    - cron: "*/4 * * * *"  # প্রতি ৪ মিনিট পর পর
   workflow_dispatch:
 
 jobs:
@@ -10,11 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Step 1: Checkout current repo (where YAML exists)
       - name: Checkout current repo
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      # Step 2: Checkout private repo (where playlist.m3u exists)
       - name: Checkout private repo (akash_drama)
         uses: actions/checkout@v4
         with:
@@ -22,26 +24,29 @@ jobs:
           token: ${{ secrets.PRIVATE_TOKEN }}
           path: akash_repo
 
-      - name: Copy playlist to current repo
+      # Step 3: Create data folder (if not exists) & copy playlist
+      - name: Copy playlist to /data folder
         run: |
+          mkdir -p data
           if [ -f "akash_repo/playlist.m3u" ]; then
-            cp akash_repo/playlist.m3u playlist.m3u
-            echo " Copied playlist.m3u to current repo."
+            cp akash_repo/playlist.m3u data/playlist.m3u
+            echo "✅ Copied playlist.m3u to data/playlist.m3u"
           else
-            echo "❌ playlist.m3u not found in private repo!"
+            echo "❌ playlist.m3u not found in akash_drama repo!"
             exit 1
           fi
 
+      # Step 4: Commit and push changes
       - name: Commit and push updated playlist
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          if git diff --quiet playlist.m3u; then
-            echo " No changes in playlist.m3u, skipping commit."
+          if git diff --quiet data/playlist.m3u; then
+            echo "ℹ️ No changes detected in data/playlist.m3u, skipping commit."
           else
-            git add playlist.m3u
-            git commit -m "Updated playlist.m3u at $(date '+%Y-%m-%d %H:%M:%S')"
+            git add data/playlist.m3u
+            git commit -m "Auto-updated playlist.m3u on $(date '+%Y-%m-%d %H:%M:%S')"
             git push
-            echo "✅ playlist.m3u updated and pushed."
+            echo "✅ data/playlist.m3u updated and pushed."
           fi
