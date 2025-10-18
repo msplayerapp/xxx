@@ -1,0 +1,40 @@
+name: Fetch Playlist Every 4 Minutes
+
+on:
+  schedule:
+    - cron: "*/4 * * * *"
+  workflow_dispatch:
+
+jobs:
+  fetch_playlist:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout private repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 1
+
+      - name: Print current time
+        run: echo "Running at $(date)"
+
+      - name: Show playlist.m3u content
+        run: |
+          if [ -f playlist.m3u ]; then
+            echo " playlist.m3u found!"
+            head -n 20 playlist.m3u
+          else
+            echo " playlist.m3u not found!"
+          fi
+
+      - name: Run custom Python script (optional)
+        run: |
+          python3 <<'PY'
+          import time
+          print("Processing playlist securely...")
+          with open("playlist.m3u", "r", encoding="utf-8") as f:
+              data = f.read()
+              print("Playlist length:", len(data))
+          time.sleep(1)
+          PY
