@@ -2,44 +2,46 @@ name: Fetch Akash Drama Playlist
 
 on:
   schedule:
-    - cron: "*/4 * * * *"   # প্রতি ৪ মিনিট পর
+    - cron: "*/4 * * * *"
   workflow_dispatch:
 
 jobs:
-  fetch_playlist:
+  update_playlist:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout current repo (where workflow runs)
+      - name: Checkout current repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout private repo (akash_drama)
         uses: actions/checkout@v4
         with:
           repository: msplayerapp/akash_drama
-          token: ${{ secrets.PRIVATE_TOKEN }}   # নিচে বোঝানো হয়েছে কিভাবে এইটা তৈরি করবে
+          token: ${{ secrets.PRIVATE_TOKEN }}
           path: akash_repo
 
-      - name: Verify playlist.m3u exists
+      - name: Copy playlist to current repo
         run: |
           if [ -f "akash_repo/playlist.m3u" ]; then
-            echo "✅ playlist.m3u found!"
-            head -n 20 akash_repo/playlist.m3u
+            cp akash_repo/playlist.m3u playlist.m3u
+            echo " Copied playlist.m3u to current repo."
           else
-            echo "❌ playlist.m3u not found in akash_repo!"
+            echo "❌ playlist.m3u not found in private repo!"
             exit 1
           fi
 
-      - name: Process playlist securely (Python)
+      - name: Commit and push updated playlist
         run: |
-          python3 <<'PY'
-          import os, time
-          path = "akash_repo/playlist.m3u"
-          if os.path.exists(path):
-              with open(path, "r", encoding="utf-8") as f:
-                  data = f.read()
-              print("✅ Playlist fetched successfully!")
-              print("File size:", len(data), "bytes")
-          else:
-              print("❌ playlist.m3u missing!")
-          PY
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          if git diff --quiet playlist.m3u; then
+            echo " No changes in playlist.m3u, skipping commit."
+          else
+            git add playlist.m3u
+            git commit -m "Updated playlist.m3u at $(date '+%Y-%m-%d %H:%M:%S')"
+            git push
+            echo "✅ playlist.m3u updated and pushed."
+          fi
